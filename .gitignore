@@ -1,0 +1,9 @@
+# Xcode
+xcuserdata/
+*.xcuserstate
+.DS_Store
+DerivedData/
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
