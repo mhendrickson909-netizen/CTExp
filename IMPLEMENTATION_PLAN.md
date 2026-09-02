@@ -265,6 +265,92 @@ Grep the test target for `URLSession` and confirm the only match is inside `Mock
 - Walk the acceptance criteria checklist in `TECHNICAL_REQUIREMENTS.md` §11 top to bottom and confirm each item against the running app and the test results.
 - Run `xcodebuild test -scheme CTExp` from the command line (or the current scheme name) to confirm the suite is green outside of Xcode's UI too, e.g. for CI parity.
 
+## Addendum: Snapshot testing for the views (added 2026-09-02)
+
+This wasn't in the original scope — §10.1 of `TECHNICAL_REQUIREMENTS.md` explicitly left SwiftUI view code out of the line-coverage target, on the grounds that layout isn't meaningfully unit-testable. Snapshot testing is a different, complementary kind of test: it renders a view to an image and diffs it against a saved reference, catching visual regressions in `PhotoListView`'s three states rather than asserting on view-model logic (already covered by Step 12). Added as Steps 15–18 below rather than folded into the original numbering, since it's an addition to scope, not a step that was always planned.
+
+## Step 15 — Add the swift-snapshot-testing package
+
+This has to happen in Xcode itself — hand-editing Swift Package references into `project.pbxproj` (the `XCRemoteSwiftPackageReference`/`XCSwiftPackageProductDependency` entries, plus `Package.resolved`) is exactly the kind of edit that risks corrupting the project file, same reasoning as why the `CTExpTests` target itself had to be added via Xcode back in Step 1.
+
+In Xcode: **File → Add Package Dependencies…**, enter `https://github.com/pointfreeco/swift-snapshot-testing`, pick "Up to Next Major Version" from the latest release, and — important — add the `SnapshotTesting` product **only to the `CTExpTests` target**, not the `CTExp` app target. It's test-only tooling and has no reason to ship in the app.
+
+**Verify:** *(Please add the package and confirm the project resolves/builds with it present — ⌘B on the `CTExpTests` target is enough, no test file needs it yet.)*
+
+## Step 16 — Make `PhotoListView`'s view model injectable
+
+`PhotoListView` currently constructs its own `PhotoListViewModel()` inline (`@StateObject private var viewModel = PhotoListViewModel()`), which is fine for the app but means a test has no way to hand it a view model that's already wired to a `MockPhotoService` with controlled data. Add a constructor:
+
+```swift
+struct PhotoListView: View {
+    @StateObject private var viewModel: PhotoListViewModel
+
+    init(viewModel: PhotoListViewModel = PhotoListViewModel()) {
+        _viewModel = StateObject(wrappedValue: viewModel)
+    }
+
+    // body unchanged
+}
+```
+
+The default argument preserves the existing call site in `ContentView.swift` (`PhotoListView()` still works, still uses the real `PhotoService`) while opening the same kind of seam Steps 5–6 already established for `PhotoService`/`PhotoListViewModel` — inject the collaborator, default to the real one.
+
+**Verify:** Compiles, `ContentView.swift` unchanged and still builds/runs correctly.
+
+**Progress note (2026-09-02):** written as specified — `_viewModel = StateObject(wrappedValue: viewModel)` in the new initializer, default argument preserves `PhotoListView()` at the `ContentView.swift` call site (left untouched).
+
+**Build error found and fixed (2026-09-02):** line 18 (`init(viewModel: PhotoListViewModel = PhotoListViewModel())`) hit the same class of error as the Step 5 addendum — "Call to main actor-isolated initializer 'init(service:)' in a synchronous nonisolated context." Same root cause (default-argument expressions always evaluate in a nonisolated context, and `PhotoListViewModel`'s init was implicitly `@MainActor` because the class is), but a different fix this time: unlike `PhotoService`, `PhotoListViewModel` genuinely *should* stay `@MainActor` (it owns `@Published` UI state), so marking the whole class `nonisolated` isn't right. Instead, only its `init(service:)` — in `ViewModels/PhotoListViewModel.swift` — was marked `nonisolated init(...)`. This is a documented, valid pattern: an `@MainActor` class's initializer can itself be `nonisolated` as long as it only does simple stored-property assignment (which this one does — `self.service = service`, no access to `state` or any other main-actor-isolated member), letting the instance be *constructed* off the main actor while its methods and properties stay properly isolated.
+
+**Follow-up build error, then a course correction (2026-09-02):** marking the init `nonisolated` surfaced a second error on `PhotoListViewModel.swift` line 24 ("Main actor-isolated property 'service' can not be mutated from a nonisolated context"). The first attempted fix — also marking the `service` property `nonisolated` — turned out not to fully resolve it (the same error persisted after rebuilding). Rather than keep chasing `nonisolated` annotations deeper into `PhotoListViewModel`, stepped back and fixed the actual root cause instead:
+
+**Root cause:** Swift evaluates default-parameter-value expressions in an always-nonisolated context, regardless of the enclosing declaration's own isolation. `PhotoListView.init(viewModel: PhotoListViewModel = PhotoListViewModel())`'s default value called `PhotoListViewModel`'s `@MainActor` init from that nonisolated position — that was the real trigger, and every fix attempted directly on `PhotoListViewModel` was treating the symptom, not this.
+
+**Actual fix:** `PhotoListViewModel.swift` was reverted to its original, plain form — no `nonisolated` anywhere, fully and simply `@MainActor` as Step 6 first wrote it. Instead, `PhotoListView`'s single initializer-with-default-value was split into two initializers: `init(viewModel: PhotoListViewModel)` (no default — what tests use) and a separate `init()` that calls `self.init(viewModel: PhotoListViewModel())` from its own *body* rather than a default-argument position. A call inside an init's body follows ordinary isolation rules (this `init()` is itself `@MainActor`, per the project's `SWIFT_DEFAULT_ACTOR_ISOLATION` setting, so a `@MainActor` init calling another `@MainActor` init is unremarkable), which is what sidesteps the special default-argument rule entirely. `ContentView.swift`'s `PhotoListView()` call site is unaffected either way.
+
+## Step 17 — Photo fixtures for snapshot tests
+
+Create `CTExpTests/Support/PhotoFixtures.swift` — a small, deterministic set of `Photo` values reused across snapshot tests (and available to any other test that wants realistic-but-fixed data, rather than each test file inventing its own). Deterministic matters here specifically because snapshot tests compare rendered images byte-for-byte(ish); titles/ids need to be fixed, not randomly generated per run.
+
+```swift
+enum PhotoFixtures {
+    static let short: [Photo] = [
+        Photo(id: 1, albumId: 1, title: "Mountain lake",
+              url: URL(string: "https://picsum.photos/seed/1/600")!,
+              thumbnailUrl: URL(string: "https://picsum.photos/seed/1/150")!),
+        Photo(id: 2, albumId: 1, title: "City skyline at dusk",
+              url: URL(string: "https://picsum.photos/seed/2/600")!,
+              thumbnailUrl: URL(string: "https://picsum.photos/seed/2/150")!),
+        Photo(id: 3, albumId: 1, title: "A much longer title to check how the row wraps across two lines",
+              url: URL(string: "https://picsum.photos/seed/3/600")!,
+              thumbnailUrl: URL(string: "https://picsum.photos/seed/3/150")!),
+    ]
+}
+```
+
+Marked `nonisolated` for the same reason as the other test-support types (Steps 9–10), and lives in `Support/` alongside the mocks since it's shared fixture data, not a test file itself. The third entry with a deliberately long title is there so the `.loaded` snapshot exercises `PhotoRowView`'s two-line wrap, not just the happy-path short case.
+
+**Verify:** Compiles.
+
+**Progress note (2026-09-02):** `CTExpTests/Support/PhotoFixtures.swift` written as specified, three photos (two short titles, one long one to exercise the two-line wrap), marked `nonisolated` per the established pattern.
+
+## Step 18 — Snapshot tests for `PhotoListView`
+
+Create `CTExpTests/PhotoListViewSnapshotTests.swift`, covering the three states from §7.3/§7.4:
+
+- **`.loaded`**: construct `MockPhotoService` with `result = .success(PhotoFixtures.short)`, build `PhotoListViewModel(service:)`, `await viewModel.load()` to settle it deterministically, *then* construct `PhotoListView(viewModel:)` and `assertSnapshot`. Awaiting `load()` before rendering — rather than relying on the view's own `.task` firing during the snapshot render — is what makes this deterministic instead of racy.
+- **`.error`**: same pattern with `result = .failure(.network(underlying: "offline"))`.
+- **`.loading`**: needs a `MockPhotoService` whose `fetchPhotos()` never returns (e.g. `try await Task.sleep(for: .seconds(3600))` before returning anything), so the view model provably stays in its initial `.loading` state for the snapshot — don't `await load()` for this case, just construct the view and snapshot immediately.
+
+Since `PhotoListView`/`PhotoListViewModel` are `@MainActor`, this test file should be `@MainActor` too, same reasoning as Step 12.
+
+Record reference images on first run (`isRecording = true` on the first pass, or the `SnapshotTesting` record mode via the assertion call), inspect them once to confirm they look right, then flip back to compare mode and commit the reference images alongside the test.
+
+**Progress note (2026-09-02):** `MockPhotoService` (Step 10) extended first with a `var neverResolves = false` flag — when set, `fetchPhotos()` does `try await Task.sleep(nanoseconds: .max)` instead of returning `result`, giving the `.loading` case a way to stay pinned in that state indefinitely rather than racing a real `Result` resolving before the snapshot captures.
+
+`CTExpTests/PhotoListViewSnapshotTests.swift` written with the three cases: `.loaded` and `.error` both call `await viewModel.load()` to settle state deterministically *before* constructing `PhotoListView(viewModel:)` and snapshotting, rather than relying on the view's own `.task` firing during capture; `.loading` uses `neverResolves = true` and skips calling `load()` at all, letting the view's `.task` fire but never complete. All three use a fixed `390×844` layout (`.image(layout: .fixed(width:height:))`) since `PhotoListView`'s `List` doesn't have a natural intrinsic size for `.sizeThatFits`.
+
+**Verify:** *(Please run ⌘U, inspect the three recorded snapshots once by eye to confirm they look correct, then re-run in compare mode to confirm they pass.)*
+
 ## Suggested commit breakdown
 
-If committing incrementally rather than as one large commit, this maps cleanly to the steps above: (1) model, (2) network session protocol + service + error type, (3) view model, (4) views + ContentView wiring, (5) test doubles (`MockNetworkSession`, `MockPhotoService`), (6) model/service/view-model tests. Keeping the test-double commit separate from both the feature commits and the test commits makes it easy to see the testability seams as their own reviewable unit.
+If committing incrementally rather than as one large commit, this maps cleanly to the steps above: (1) model, (2) network session protocol + service + error type, (3) view model, (4) views + ContentView wiring, (5) test doubles (`MockNetworkSession`, `MockPhotoService`), (6) model/service/view-model tests, (7) snapshot testing addition (package, injectable view model, fixtures, snapshot tests + reference images). Keeping the test-double commit separate from both the feature commits and the test commits makes it easy to see the testability seams as their own reviewable unit.
