@@ -20,7 +20,7 @@ final class PhotoListViewModel: ObservableObject {
 
     private let service: PhotoServiceProtocol
 
-    init(service: PhotoServiceProtocol = PhotoService()) {
+    init(service: PhotoServiceProtocol = PhotoService()) {// Photo Service has been marked non-isolated bc it does not need to be on the MainThread. See the addendum in the readme for more info.
         self.service = service
     }
 

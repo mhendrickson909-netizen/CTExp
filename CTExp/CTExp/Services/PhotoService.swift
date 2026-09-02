@@ -9,7 +9,7 @@
 import Foundation
 import os
 
-final class PhotoService: PhotoServiceProtocol {
+nonisolated final class PhotoService: PhotoServiceProtocol {
     private static let endpoint = URL(string: "https://jsonplaceholder.typicode.com/photos")!
     private static let logger = Logger(subsystem: "mhen909.CTExp", category: "PhotoService")
 

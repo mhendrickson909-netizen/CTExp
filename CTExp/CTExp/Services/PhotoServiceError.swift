@@ -8,7 +8,7 @@
 
 import Foundation
 
-enum PhotoServiceError: Error, Equatable {
+nonisolated enum PhotoServiceError: Error, Equatable {
     case network(underlying: String)
     case invalidResponse(statusCode: Int)
     case decoding

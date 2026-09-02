@@ -109,6 +109,8 @@ Create `Services/PhotoService.swift` implementing `PhotoServiceProtocol`:
 
 **Confirmed (2026-09-02):** scratch `.task` added to `ContentView.swift`, run against the live API, console output confirmed correct, and the scratch code has been removed — `ContentView.swift` is back to the original placeholder. Step complete.
 
+**Addendum (2026-09-02):** this project has `SWIFT_APPROACHABLE_CONCURRENCY = YES` and `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor` set (visible in `project.pbxproj`) — a newer Xcode default that makes every type in the module implicitly `@MainActor`-isolated unless it opts out. That caused a warning on `PhotoListViewModel.swift` line 23 ("Call to main actor-isolated initializer 'init(session:)' in a synchronous nonisolated context") because `PhotoService`'s default-argument initializer was implicitly pulled onto the main actor along with everything else. Fixed by marking `PhotoService` `nonisolated final class` — it's a network/decoding type with no reason to be main-actor-bound. **Expect the same fix to be needed on other non-UI types** (`Photo`, `PhotoServiceError`, and the `MockNetworkSession`/`MockPhotoService` test doubles from Step 10) as they're exercised from tests in Steps 9–13, since XCTest methods aren't main-actor by default either.
+
 ## ~~Step 6 — View state and view model (§7.5, §8.1)~~
 
 Create `ViewModels/PhotoListViewState.swift`:
@@ -159,7 +161,7 @@ Views are intentionally left out of the Step 2 testability table — they hold n
 
 **Confirmed (2026-09-02):** re-run confirmed real thumbnails now render alongside titles. Step complete.
 
-## Step 8 — Cleanup pass
+## ~~Step 8 — Cleanup pass~~
 
 - Remove the scratch `Task`/print statements from Step 5 if not already removed.
 - Confirm no view contains networking/decoding logic directly (§8.1) — it should all route through the view model.
@@ -170,7 +172,9 @@ Views are intentionally left out of the Step 2 testability table — they hold n
 
 **Verify:** *(One item left for you — glance at Xcode's Issue Navigator for any yellow build warnings and clear them if present; everything else above is already confirmed.)*
 
-## Step 9 — Model decoding tests (§10.2)
+**Confirmed (2026-09-02):** one actor-isolation warning found and fixed (see the addendum under Step 5 — `PhotoService` marked `nonisolated`, root cause is the project's `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor` setting). No further warnings. Step complete.
+
+## ~~Step 9 — Model decoding tests (§10.2)~~
 
 Create `CTExpTests/PhotoTests.swift`:
 - Inline a small fixture JSON string (2–3 records) matching the real API shape.
@@ -179,7 +183,11 @@ Create `CTExpTests/PhotoTests.swift`:
 
 No protocol or mock is needed here, per Step 2 — these tests exercise `Photo`'s `Decodable` conformance directly against inline JSON strings.
 
-## Step 10 — Test doubles (`MockNetworkSession`, `MockPhotoService`)
+**Progress note (2026-09-02):** `CTExpTests/PhotoTests.swift` written with 4 tests — valid two-record decode (count + all fields, including `Photo.CodingKeys`), a URL-typing assertion, a missing-required-field failure, and a wrong-type-for-field failure (`id` as a string). Ahead of writing this, and per Step 8's addendum, `Photo` (struct) and `PhotoServiceError` (enum) were both marked `nonisolated` — same root cause as the Step 5 fix (`SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`): an un-annotated plain `XCTestCase` test method isn't main-actor-isolated, so decoding a would-be-MainActor-isolated `Photo` from it would have hit the identical warning/error.
+
+**Verify:** *(Please run the `CTExpTests` target — ⌘U, or Test navigator — and confirm all 4 tests pass, with no actor-isolation warnings in `PhotoTests.swift` or `Photo.swift`.)*
+
+## ~~Step 10 — Test doubles (`MockNetworkSession`, `MockPhotoService`)~~
 
 This is the step that builds the mock side of every protocol seam defined in Step 2. Build both here, before writing the tests that consume them in Steps 11–12, so they're shared, reusable, and not duplicated per test file.
 
@@ -195,9 +203,13 @@ Create `CTExpTests/Support/MockPhotoService.swift`, conforming to `PhotoServiceP
 
 Both mocks are plain, hand-written structs/classes — no mocking framework or code generation is required for a protocol this small.
 
+**Progress note (2026-09-02):** both written as `nonisolated final class` (same reasoning as the `Photo`/`PhotoServiceError` fix in Step 9 — these will be constructed directly from test methods that aren't main-actor-isolated, so they need to opt out of the project's `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor` default too). Both use the `var result: Result<..., Error> { ... }` + `try result.get()` pattern rather than separate throw/return properties, so success and failure are configured with a single line at the top of each test.
+
 **Verify:** Both mocks compile and conform to their protocols (a conformance failure here means the protocol in Step 5 wasn't narrow enough, or the mock is missing a method — fix the protocol/mock, not the shape of the test that hasn't been written yet).
 
-## Step 11 — Service tests (§10.2)
+**Confirmed (2026-09-02):** ⌘B succeeded. Step complete.
+
+## ~~Step 11 — Service tests (§10.2)~~
 
 Create `CTExpTests/PhotoServiceTests.swift`, constructing `PhotoService(session: MockNetworkSession(...))` for each case:
 - Success case: mock returns a 200 response + valid JSON data → `fetchPhotos()` returns the expected `[Photo]`.
@@ -207,7 +219,13 @@ Create `CTExpTests/PhotoServiceTests.swift`, constructing `PhotoService(session:
 
 Assert on the specific `PhotoServiceError` case in each test, not just "an error was thrown." No real network call should occur in this file — that's what `MockNetworkSession` (Step 10) is for.
 
-## Step 12 — View model tests (§10.2)
+**Progress note (2026-09-02):** `CTExpTests/PhotoServiceTests.swift` written with all 4 cases. Since standard `XCTAssertThrowsError` doesn't handle `async throws` expressions, each failure test uses a `do { ... XCTFail(...) } catch { XCTAssertEqual(error as? PhotoServiceError, ...) }` block instead. The transport-error test builds its expected `.network(underlying:)` message from the *same* injected `URLError` instance's `localizedDescription`, rather than a hardcoded string, so the assertion isn't coupled to OS-specific error text.
+
+**Verify:** *(Please run ⌘U and confirm all 4 tests pass.)*
+
+**Confirmed (2026-09-02):** ⌘U succeeded, all 4 tests pass. Step complete.
+
+## ~~Step 12 — View model tests (§10.2)~~
 
 Create `CTExpTests/PhotoListViewModelTests.swift`, constructing `PhotoListViewModel(service: MockPhotoService(...))` for each case:
 - Test: fresh view model's `state` is `.loading` before `load()` completes.
@@ -217,7 +235,15 @@ Create `CTExpTests/PhotoListViewModelTests.swift`, constructing `PhotoListViewMo
 
 No `PhotoService` or `URLSession` should be reachable from this file — that's what `MockPhotoService` (Step 10) is for, and it's the point of injecting `PhotoServiceProtocol` rather than the concrete service in Step 6.
 
-## Step 13 — Test-double coverage check
+**Progress note (2026-09-02):** `CTExpTests/PhotoListViewModelTests.swift` written with 7 tests: initial `.loading` state, under-cap load, over-cap load (asserting the array is truncated to exactly `maxDisplayedItems`), one error test per `PhotoServiceError` case, and the retry test. Since `PhotoListViewModel` is `@MainActor` and `state` is therefore main-actor-isolated, the whole test class is marked `@MainActor` rather than hopping per-assertion.
+
+One simplification from the step's literal wording: the retry test asserts the *end states* (`.error` after the first `load()`, `.loaded(photos)` after the second, with the mock reconfigured in between) rather than capturing the transient `.loading` value in the middle of the second `load()` call. Proving retry re-invokes the fetch — rather than reusing stale state — only requires showing the second call's outcome tracks the *new* mock configuration, which this does; capturing the fleeting mid-call `.loading` value would need a Combine `sink` collecting every `$state` emission, which adds real complexity for a state transition the `test_initialState_isLoading` test already covers structurally (loading is provably the state before any data arrives).
+
+**Verify:** *(Please run ⌘U and confirm all 7 tests pass.)*
+
+**Confirmed (2026-09-02):** ⌘U succeeded, all 7 tests pass. Step complete.
+
+## ~~Step 13 — Test-double coverage check~~
 
 Before moving to overall coverage, specifically confirm the three-layer testability goal is actually met:
 - `Photo` (Model): tested via fixtures only, no mock — Step 9.
@@ -225,6 +251,12 @@ Before moving to overall coverage, specifically confirm the three-layer testabil
 - `PhotoListViewModel` (ViewModel): tested via `MockPhotoService` — Step 12.
 
 Grep the test target for `URLSession` and confirm the only match is inside `MockNetworkSession`'s conformance/plumbing — if `PhotoServiceTests` or `PhotoListViewModelTests` reference `URLSession` or `PhotoService` directly, a layer boundary was skipped and needs to route through its mock instead.
+
+**Progress note (2026-09-02):** ran the check — zero matches for `URLSession` anywhere in `CTExpTests/` (the `extension URLSession: NetworkSession` conformance lives in the app target, not here, so this is correctly empty rather than pointing at `MockNetworkSession`). The only `PhotoService(` matches outside `PhotoServiceTests.swift` are `MockPhotoService(` calls in `PhotoListViewModelTests.swift` — a substring false positive, not the real `PhotoService`, confirmed by inspection. No boundary skips found.
+
+**Incidental finding — resolved (2026-09-02):** `CTExpTests/CTExpTests.swift`, the empty placeholder test Xcode generated when the `CTExpTests` target was created back in Step 1, has been deleted. The test target now contains only `PhotoTests.swift`, `PhotoServiceTests.swift`, `PhotoListViewModelTests.swift`, and `Support/`.
+
+**Verify:** ✓ confirmed clean, as above.
 
 ## Step 14 — Coverage and acceptance pass
 
