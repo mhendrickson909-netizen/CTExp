@@ -101,7 +101,9 @@ Create `Services/PhotoService.swift` implementing `PhotoServiceProtocol`:
 - Decode with `JSONDecoder().decode([Photo].self, from: data)`; catch decode failures and rethrow as `PhotoServiceError.decoding`.
 - Log failures via `os.Logger` before rethrowing (§9.4) — one line, include the underlying error/status code.
 
-**Verify:** Temporarily call `PhotoService().fetchPhotos()` from a throwaway `Task` in `CTExpApp.init` (or a SwiftUI `.task` on the placeholder view) and print the count/first title to the console to confirm it round-trips against the real API. Remove this scratch call once confirmed — it's not part of the app.
+**Progress note (2026-09-02):** `Services/NetworkSession.swift` (protocol + `URLSession` conformance), `Services/PhotoServiceProtocol.swift`, and `Services/PhotoService.swift` all written as specified — `PhotoService` takes `session: NetworkSession = URLSession.shared` in its initializer, so the seam from Step 2's table is in place. Logging added via `os.Logger` on each failure path (§9.4) before the mapped `PhotoServiceError` is thrown.
+
+**Verify:** Temporarily call `PhotoService().fetchPhotos()` from a throwaway `Task` in `CTExpApp.init` (or a SwiftUI `.task` on the placeholder view) and print the count/first title to the console to confirm it round-trips against the real API. Remove this scratch call once confirmed — it's not part of the app. *(Please confirm compiles with ⌘B — the scratch network round-trip is optional but worth doing once, given this is the app's first real network call.)*
 
 ## Step 6 — View state and view model (§7.5, §8.1)
 
