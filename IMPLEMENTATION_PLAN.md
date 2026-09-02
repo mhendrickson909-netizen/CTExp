@@ -11,7 +11,7 @@ Each step lists the files it touches, what to build, and a way to verify it befo
 
 **Progress tracking:** when a step is fully done — its code written and its "Verify" line actually confirmed, not just started — strike through that step's heading text, e.g. `## ~~Step 3 — Data model (§6 of requirements)~~`. Leave the step's body (the bullets and Verify line) unstruck so the record of what was built stays readable; the strikethrough on the title alone is enough to scan the document and see progress at a glance. Don't cross out a step that's partially done — finish it, verify it, then cross it out. As of this revision, no steps are yet complete.
 
-## Step 1 — Project structure
+## ~~Step 1 — Project structure~~
 
 Add a `Sources` grouping (or just organize by group in Xcode) inside the `CTExp` target for the new code, and confirm the `CTExpTests` test target exists and is wired to the app target (Xcode creates this by default; verify under the scheme's Test action).
 
@@ -22,7 +22,11 @@ Create these groups/folders:
 - `CTExp/CTExp/Views/`
 - `CTExp/CTExpTests/Support/` (test doubles and fixtures live here, separate from the test files that use them)
 
-**Verify:** Project still builds and runs (⌘R), showing the existing "Hello, world!" placeholder.
+**Progress note (2026-09-02):** the four `CTExp/CTExp/` folders above and a placeholder `CTExp/CTExpTests/Support/` folder were created on disk. The project uses Xcode's newer file-system-synchronized groups (`PBXFileSystemSynchronizedRootGroup`), so these folders should appear automatically in the Xcode navigator without needing to be added as groups manually — open the project and confirm they're visible. **However, `project.pbxproj` currently has no `CTExpTests` target at all** — this scaffold was created without a test target, so one doesn't just need "confirming," it needs to be added: in Xcode, File → New → Target… → Unit Testing Bundle, name it `CTExpTests`, and make sure it targets the `CTExp` app. This has to be done from Xcode itself (target creation isn't something to hand-edit into `project.pbxproj` from the command line). Step 1 isn't fully complete until that target exists and the scheme's Test action is wired to it.
+
+**Verify:** Project still builds and runs (⌘R), showing the existing "Hello, world!" placeholder. Also run ⌘U (or check the Test navigator) to confirm `CTExpTests` exists and executes, even with zero tests in it yet.
+
+**Confirmed (2026-09-02):** both ⌘R and ⌘U verified working, `CTExpTests` target in place. Step complete.
 
 ## Step 2 — Testability strategy: protocols and test doubles
 
@@ -41,23 +45,31 @@ Two consequences of this table that matter for the steps below:
 
 **Verify:** No code yet — this step is the contract the rest of the plan implements. Re-check it after Step 6: at that point every layer with an external dependency should have exactly one protocol in front of it, matching this table.
 
-## Step 3 — Data model (§6 of requirements)
+## ~~Step 3 — Data model (§6 of requirements)~~
 
 Create `Models/Photo.swift`:
 - `struct Photo: Codable, Identifiable, Equatable` with `id: Int`, `albumId: Int`, `title: String`, `url: URL`, `thumbnailUrl: URL`.
 - Field names match the API's JSON keys exactly (`albumId`, `id`, `title`, `url`, `thumbnailUrl`), so no custom `CodingKeys` should be needed — but add them explicitly anyway for clarity and to guard against the API changing casing.
 - Per the Step 2 table: no protocol or mock for this layer. It's tested directly against fixture JSON in Step 9.
 
-**Verify:** Compiles. No runtime check possible yet — covered by tests in Step 9.
+**Progress note (2026-09-02):** `Models/Photo.swift` written with `CodingKeys` included as specified.
 
-## Step 4 — Network error type (§8.3)
+**Verify:** Compiles. No runtime check possible yet — covered by tests in Step 9. *(Please confirm with ⌘B — the sandbox this plan is being executed from can't run Xcode's build toolchain.)*
+
+**Confirmed (2026-09-02):** ⌘B succeeded. Step complete.
+
+## ~~Step 4 — Network error type (§8.3)~~
 
 Create `Services/PhotoServiceError.swift`:
 - `enum PhotoServiceError: Error, Equatable { case network(underlying: String), invalidResponse(statusCode: Int), decoding }`
   (Storing `String`/`Int` rather than the raw `Error`/`URLResponse` keeps the enum `Equatable`, which makes test assertions much simpler.)
 - Add a computed `var userFacingMessage: String` on the enum (or on the view model — pick one place) that returns the same short, non-technical message for all cases per §7.4, e.g. "Couldn't load photos. Check your connection and try again." Keep the underlying detail (§9.4) out of this string; that's what the `Logger` call in Step 5 is for.
 
-**Verify:** Compiles.
+**Progress note (2026-09-02):** `Services/PhotoServiceError.swift` written, with `userFacingMessage` returning the same non-technical string for all three cases.
+
+**Verify:** Compiles. *(Please confirm with ⌘B.)*
+
+**Confirmed (2026-09-02):** ⌘B succeeded. Step complete.
 
 ## Step 5 — Network session protocol and photo service (§5, §8.2, §8.3)
 

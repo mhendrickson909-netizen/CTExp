@@ -6,11 +6,27 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXContainerItemProxy section */
+		679588C83048C52500747202 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 67A728CC3048ACF3008355A6 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 67A728D33048ACF3008355A6;
+			remoteInfo = CTExp;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
+		679588C43048C52500747202 /* CTExpTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CTExpTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		67A728D43048ACF3008355A6 /* CTExp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CTExp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		679588C53048C52500747202 /* CTExpTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = CTExpTests;
+			sourceTree = "<group>";
+		};
 		67A728D63048ACF3008355A6 /* CTExp */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = CTExp;
@@ -19,6 +35,13 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		679588C13048C52500747202 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		67A728D13048ACF3008355A6 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -33,6 +56,7 @@
 			isa = PBXGroup;
 			children = (
 				67A728D63048ACF3008355A6 /* CTExp */,
+				679588C53048C52500747202 /* CTExpTests */,
 				67A728D53048ACF3008355A6 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -41,6 +65,7 @@
 			isa = PBXGroup;
 			children = (
 				67A728D43048ACF3008355A6 /* CTExp.app */,
+				679588C43048C52500747202 /* CTExpTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -48,6 +73,29 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		679588C33048C52500747202 /* CTExpTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 679588CA3048C52500747202 /* Build configuration list for PBXNativeTarget "CTExpTests" */;
+			buildPhases = (
+				679588C03048C52500747202 /* Sources */,
+				679588C13048C52500747202 /* Frameworks */,
+				679588C23048C52500747202 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				679588C93048C52500747202 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				679588C53048C52500747202 /* CTExpTests */,
+			);
+			name = CTExpTests;
+			packageProductDependencies = (
+			);
+			productName = CTExpTests;
+			productReference = 679588C43048C52500747202 /* CTExpTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		67A728D33048ACF3008355A6 /* CTExp */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 67A728DF3048ACF4008355A6 /* Build configuration list for PBXNativeTarget "CTExp" */;
@@ -80,6 +128,10 @@
 				LastSwiftUpdateCheck = 2660;
 				LastUpgradeCheck = 2660;
 				TargetAttributes = {
+					679588C33048C52500747202 = {
+						CreatedOnToolsVersion = 26.6;
+						TestTargetID = 67A728D33048ACF3008355A6;
+					};
 					67A728D33048ACF3008355A6 = {
 						CreatedOnToolsVersion = 26.6;
 					};
@@ -100,11 +152,19 @@
 			projectRoot = "";
 			targets = (
 				67A728D33048ACF3008355A6 /* CTExp */,
+				679588C33048C52500747202 /* CTExpTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		679588C23048C52500747202 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		67A728D23048ACF3008355A6 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -115,6 +175,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		679588C03048C52500747202 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		67A728D03048ACF3008355A6 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -124,7 +191,70 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		679588C93048C52500747202 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			platformFilters = (
+				ios,
+				xros,
+			);
+			target = 67A728D33048ACF3008355A6 /* CTExp */;
+			targetProxy = 679588C83048C52500747202 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		679588CB3048C52500747202 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = U695W73R8C;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = mhen909.CTExpTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = xros;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/CTExp.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/CTExp";
+				XROS_DEPLOYMENT_TARGET = 26.5;
+			};
+			name = Debug;
+		};
+		679588CC3048C52500747202 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = U695W73R8C;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = mhen909.CTExpTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = xros;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/CTExp.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/CTExp";
+				VALIDATE_PRODUCT = YES;
+				XROS_DEPLOYMENT_TARGET = 26.5;
+			};
+			name = Release;
+		};
 		67A728DD3048ACF4008355A6 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -332,6 +462,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		679588CA3048C52500747202 /* Build configuration list for PBXNativeTarget "CTExpTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				679588CB3048C52500747202 /* Debug */,
+				679588CC3048C52500747202 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		67A728CF3048ACF3008355A6 /* Build configuration list for PBXProject "CTExp" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
