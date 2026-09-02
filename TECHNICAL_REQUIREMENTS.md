@@ -64,6 +64,8 @@ Requirements on the data layer:
 - No API key or auth is required; no request headers beyond the default are needed.
 - No local write-back to the API — this is read-only.
 
+**Known issue (discovered during implementation, September 2026):** JSONPlaceholder's sample data points `url` and `thumbnailUrl` at `via.placeholder.com`, which has been permanently shut down — every request to it fails, so every row's thumbnail hits `AsyncImage`'s failure state if `thumbnailUrl` is rendered directly. This isn't a defect in the app; it's stale sample data upstream, and the per-row failure fallback (§7.2/§7.4) is the correct, working behavior for it. Decision made: `PhotoRowView` derives a display-only image URL from `Photo.id` via a still-live placeholder service (Lorem Picsum, seeded by id) instead of rendering `thumbnailUrl` directly, so the table shows real thumbnails rather than fallback icons on every row. The model's own `thumbnailUrl`/`url` fields are left untouched and still decode exactly what the API returns (§6) — this substitution lives entirely in the view layer and does not change the data contract or the model tests in §10.
+
 ## 6. Data Model
 
 Define a `Codable` struct mirroring the API shape exactly, e.g.:

@@ -28,7 +28,7 @@ Create these groups/folders:
 
 **Confirmed (2026-09-02):** both ⌘R and ⌘U verified working, `CTExpTests` target in place. Step complete.
 
-## Step 2 — Testability strategy: protocols and test doubles
+## ~~Step 2 — Testability strategy: protocols and test doubles~~
 
 Before writing any of the three layers, fix the seams they'll be tested through. This is a design decision, not a coding step — the table below is what Steps 3–13 build against, so every layer that has an external dependency gets a protocol in front of it and a fake/mock behind that protocol in the test target. Nothing in `CTExpTests` should reach past a protocol boundary into a concrete `URLSession` call or a concrete `PhotoService` call.
 
@@ -44,6 +44,8 @@ Two consequences of this table that matter for the steps below:
 - **All test doubles live in `CTExpTests/Support/`**, not inline in the test files that use them — `MockNetworkSession` is reused across every `PhotoServiceTests` case, and `MockPhotoService` is reused across every `PhotoListViewModelTests` case, so each is written once (Step 10) and configured per-test.
 
 **Verify:** No code yet — this step is the contract the rest of the plan implements. Re-check it after Step 6: at that point every layer with an external dependency should have exactly one protocol in front of it, matching this table.
+
+**Confirmed (2026-09-02):** re-checked after Step 6 built successfully — `PhotoService` depends only on `NetworkSession`, `PhotoListViewModel` depends only on `PhotoServiceProtocol`, matching the table exactly. Step complete.
 
 ## ~~Step 3 — Data model (§6 of requirements)~~
 
@@ -71,7 +73,7 @@ Create `Services/PhotoServiceError.swift`:
 
 **Confirmed (2026-09-02):** ⌘B succeeded. Step complete.
 
-## Step 5 — Network session protocol and photo service (§5, §8.2, §8.3)
+## ~~Step 5 — Network session protocol and photo service (§5, §8.2, §8.3)~~
 
 This step builds the Service layer's testability seam from the Step 2 table, then the service itself.
 
@@ -103,9 +105,11 @@ Create `Services/PhotoService.swift` implementing `PhotoServiceProtocol`:
 
 **Progress note (2026-09-02):** `Services/NetworkSession.swift` (protocol + `URLSession` conformance), `Services/PhotoServiceProtocol.swift`, and `Services/PhotoService.swift` all written as specified — `PhotoService` takes `session: NetworkSession = URLSession.shared` in its initializer, so the seam from Step 2's table is in place. Logging added via `os.Logger` on each failure path (§9.4) before the mapped `PhotoServiceError` is thrown.
 
-**Verify:** Temporarily call `PhotoService().fetchPhotos()` from a throwaway `Task` in `CTExpApp.init` (or a SwiftUI `.task` on the placeholder view) and print the count/first title to the console to confirm it round-trips against the real API. Remove this scratch call once confirmed — it's not part of the app. *(Please confirm compiles with ⌘B — the scratch network round-trip is optional but worth doing once, given this is the app's first real network call.)*
+**Verify:** Temporarily call `PhotoService().fetchPhotos()` from a throwaway `Task` in `CTExpApp.init` (or a SwiftUI `.task` on the placeholder view) and print the count/first title to the console to confirm it round-trips against the real API. Remove this scratch call once confirmed — it's not part of the app.
 
-## Step 6 — View state and view model (§7.5, §8.1)
+**Confirmed (2026-09-02):** scratch `.task` added to `ContentView.swift`, run against the live API, console output confirmed correct, and the scratch code has been removed — `ContentView.swift` is back to the original placeholder. Step complete.
+
+## ~~Step 6 — View state and view model (§7.5, §8.1)~~
 
 Create `ViewModels/PhotoListViewState.swift`:
 ```swift
@@ -123,9 +127,13 @@ Create `ViewModels/PhotoListViewModel.swift`:
 - `static let maxDisplayedItems = 100` (§5) — a named constant, not a magic number, as required.
 - `func load() async`: sets `state = .loading`, calls `service.fetchPhotos()`, on success sets `state = .loaded(Array(photos.prefix(Self.maxDisplayedItems)))`, on failure catches the thrown `PhotoServiceError` and sets `state = .error(message: <mapped message>)`.
 
+**Progress note (2026-09-02):** `ViewModels/PhotoListViewState.swift` and `ViewModels/PhotoListViewModel.swift` written as specified — `PhotoListViewModel` initializes with `service: PhotoServiceProtocol = PhotoService()`, `load()` sets `.loading`, then `.loaded` (capped to `maxDisplayedItems`) or `.error(message:)` via the catch-as-`PhotoServiceError` pattern.
+
 **Verify:** Compiles. Behavior is covered by Step 12's tests, not manual testing at this stage. At this point, cross-check against the Step 2 table: `PhotoService` depends on `NetworkSession` (protocol), `PhotoListViewModel` depends on `PhotoServiceProtocol` (protocol) — no concrete type is reached for directly across either boundary.
 
-## Step 7 — Views (§7.1–§7.4)
+**Confirmed (2026-09-02):** ⌘B succeeded. Step complete.
+
+## ~~Step 7 — Views (§7.1–§7.4)~~
 
 Create `Views/PhotoRowView.swift`:
 - Takes a `Photo`, renders `AsyncImage(url: photo.thumbnailUrl)` with a placeholder (e.g. `ProgressView()` or a system-icon `Image` while loading, and a broken-image system icon on failure — `AsyncImage`'s phase-based initializer gives you all three states) next to `Text(photo.title)`.
@@ -143,7 +151,13 @@ Update `ContentView.swift` to embed `PhotoListView()` (wrapped in a `NavigationS
 
 Views are intentionally left out of the Step 2 testability table — they hold no logic to mock around (§8.1), only rendering of state the view model already owns, so they're exercised manually here rather than via a protocol seam.
 
+**Progress note (2026-09-02):** `Views/PhotoRowView.swift` (phase-based `AsyncImage` with loading/success/failure states, `.accessibilityLabel(photo.title)`) and `Views/PhotoListView.swift` (switches on `viewModel.state`, `.task` kicks off `load()`) written as specified. `ContentView.swift` updated to embed `PhotoListView()` in a `NavigationStack` with a "Photos" title, replacing the placeholder globe/text.
+
+**Issue found and fixed (2026-09-02):** first run showed titles correctly but every row's thumbnail fell into the `.failure` state — the app itself was working exactly as designed (§7.2/§7.4's per-row failure fallback), but the API's own `thumbnailUrl` points at `via.placeholder.com`, which is permanently dead. Fixed by adding a `displayThumbnailURL` computed property (private extension on `Photo`, scoped to `PhotoRowView.swift`) that derives a stand-in thumbnail from Lorem Picsum, seeded by `id`, for display only — `Photo.thumbnailUrl` itself is untouched. Full writeup in `TECHNICAL_REQUIREMENTS.md` §5. Needs a rebuild/rerun to confirm real thumbnails now render.
+
 **Verify:** Run the app (⌘R). Confirm: loading spinner appears briefly, then the table populates with thumbnails and titles. Turn on Xcode's Network Link Conditioner (or briefly disable network) and re-run to confirm the error view and Retry button appear and work.
+
+**Confirmed (2026-09-02):** re-run confirmed real thumbnails now render alongside titles. Step complete.
 
 ## Step 8 — Cleanup pass
 
@@ -151,6 +165,10 @@ Views are intentionally left out of the Step 2 testability table — they hold n
 - Confirm no view contains networking/decoding logic directly (§8.1) — it should all route through the view model.
 - Confirm nothing in `CTExp/` (the app target) imports or references anything under `CTExpTests/Support/` — the dependency only goes the other way.
 - Run SwiftLint or Xcode's built-in warnings pass if the project has one configured; otherwise just clear any yellow build warnings.
+
+**Progress note (2026-09-02):** checked programmatically — no `SCRATCH`/`print(` leftovers anywhere in `CTExp/CTExp/`, no `URLSession`/`JSONDecoder`/`NetworkSession` references inside `Views/` (networking stays confined to `Services/`), and no `CTExpTests` references from the app target. First three bullets confirmed clean. No SwiftLint config present in the project, so nothing to run there.
+
+**Verify:** *(One item left for you — glance at Xcode's Issue Navigator for any yellow build warnings and clear them if present; everything else above is already confirmed.)*
 
 ## Step 9 — Model decoding tests (§10.2)
 
